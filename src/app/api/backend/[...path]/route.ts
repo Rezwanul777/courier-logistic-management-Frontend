@@ -82,14 +82,32 @@ async function forward(
   try {
     body = await readBody(request);
     if (body) JSON.parse(body);
-  } catch (error) {
-    return failure(
-      error instanceof Error && error.message === "BODY_TOO_LARGE" ? 413 : 400,
-      error instanceof Error && error.message === "BODY_TOO_LARGE"
-        ? "The request is too large."
-        : "Invalid JSON request.",
-    );
-  }
+  } catch (error: unknown) {
+  const cause =
+    error instanceof Error &&
+    error.cause instanceof Error
+      ? error.cause
+      : null;
+
+  console.error("[CourierFlow API Proxy]", {
+    method: request.method,
+    endpoint,
+    errorName:
+      error instanceof Error
+        ? error.name
+        : "Unknown",
+    errorMessage:
+      error instanceof Error
+        ? error.message
+        : "Unknown error",
+    cause: cause?.message,
+  });
+
+  return failure(
+    502,
+    "Unable to reach the courier backend. Please try again.",
+  );
+}
 
   try {
     const headers = new Headers({ Accept: "application/json" });

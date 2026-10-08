@@ -5,10 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 
 import { AuthInput } from "@/component/auth/auth-input";
-import {
-  Alert,
-  AlertDescription,
-} from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FieldGroup } from "@/components/ui/field";
 
@@ -90,45 +87,39 @@ export function RegisterForm({
     >
       {mutation.isError && (
         <Alert variant="destructive">
-          <AlertDescription>
-            {getErrorMessage(mutation.error)}
-          </AlertDescription>
+          <AlertDescription>{getErrorMessage(mutation.error)}</AlertDescription>
         </Alert>
       )}
 
       <FieldGroup>
-        {fields.map(
-          ({ name, label, type, autoComplete }) => (
-            <form.Field key={name} name={name}>
-              {(field) => (
-                <AuthInput
-                  id={`register-${name}`}
-                  name={name}
-                  label={label}
-                  type={type}
-                  autoComplete={autoComplete}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  disabled={mutation.isPending}
-                  invalid={
-                    field.state.meta.isTouched &&
-                    !field.state.meta.isValid
-                  }
-                  errors={field.state.meta.errors}
-                  onValueChange={(value) => {
-                    mutation.reset();
-                    field.handleChange(value);
-                  }}
-                />
-              )}
-            </form.Field>
-          ),
-        )}
+        {fields.map(({ name, label, type, autoComplete }) => (
+          <form.Field key={name} name={name}>
+            {(field) => (
+              <AuthInput
+                id={`register-${name}`}
+                name={name}
+                label={label}
+                type={type}
+                autoComplete={autoComplete}
+                showPasswordToggle={type === "password"}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                disabled={mutation.isPending}
+                invalid={
+                  field.state.meta.isTouched && !field.state.meta.isValid
+                }
+                errors={field.state.meta.errors}
+                onValueChange={(value) => {
+                  mutation.reset();
+                  field.handleChange(value);
+                }}
+              />
+            )}
+          </form.Field>
+        ))}
       </FieldGroup>
 
-      <form.Subscribe
-        selector={(state) => state.isSubmitting}
-      >
+      <form.Subscribe selector={(state) => state.isSubmitting}>
         {(pending) => (
           <Button
             type="submit"

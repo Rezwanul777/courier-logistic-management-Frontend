@@ -11,6 +11,7 @@ import {
 
 import { LoginForm } from "@/component/auth/Login-Form";
 import { PublicHeader } from "@/component/layout/public-header";
+import { DemoLogin } from "@/component/auth/demo-login";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -21,6 +22,9 @@ export const metadata: Metadata = {
     follow: false,
   },
 };
+
+export const dynamic = "force-dynamic";
+
 
 const benefits = [
   {
@@ -122,6 +126,13 @@ function LoginContent() {
         </div>
 
         <LoginForm />
+
+<DemoLogin
+  enabled={
+    process.env.DEMO_LOGIN_ENABLED === "true"
+  }
+/>
+
 
         <div className="mt-8 border-t border-slate-200 pt-7">
           <p className="text-center text-sm text-slate-600">
