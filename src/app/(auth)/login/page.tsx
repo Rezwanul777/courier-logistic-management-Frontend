@@ -1,6 +1,7 @@
 import { LoginForm } from "@/component/auth/Login-Form";
 import { PackageCheck, Truck } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 
 export const metadata: Metadata = {
@@ -59,6 +60,15 @@ export default function LoginPage() {
           </div>
 
           <LoginForm />
+          <p className="text-center text-sm text-muted-foreground">
+  New to CourierFlow?{" "}
+  <Link
+    href="/register"
+    className="text-primary underline-offset-4 hover:underline"
+  >
+    Create an account
+  </Link>
+</p>
 
           <p className="text-center text-xs leading-relaxed text-muted-foreground">
             Use the email address associated with your
