@@ -28,6 +28,7 @@ import {
 import { login } from "@/lib/auth-api";
 import { loginSchema } from "@/lib/auth-schema";
 import { queryKeys } from "@/lib/query-keys";
+import Link from "next/link";
 
 export function LoginForm() {
   const queryClient = useQueryClient();
@@ -179,6 +180,15 @@ export function LoginForm() {
         </form.Field>
       </FieldGroup>
 
+      <div className="-mt-3 flex justify-end">
+  <Link
+    href="/forgot-password"
+    className="text-sm font-medium text-[#00877B] underline-offset-4 transition-colors hover:text-[#006F66] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#00877B]"
+  >
+    Forgot password?
+  </Link>
+</div>
+
       <form.Subscribe
         selector={(state) => state.isSubmitting}
       >
@@ -203,6 +213,10 @@ export function LoginForm() {
             )}
           </Button>
         )}
+
+
+
+
       </form.Subscribe>
     </form>
   );
