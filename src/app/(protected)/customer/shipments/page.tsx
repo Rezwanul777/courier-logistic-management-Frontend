@@ -1,18 +1,11 @@
 /** biome-ignore-all lint/suspicious/noArrayIndexKey: <explanation> */
 /** biome-ignore-all lint/a11y/useAriaPropsSupportedByRole: <explanation> */
 
-
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import {
-  ArrowLeft,
-  ArrowRight,
-  PackageOpen,
-  Plus,
-} from "lucide-react";
-
+import { ArrowLeft, ArrowRight, PackageOpen, Plus } from "lucide-react";
 
 import {
   parseShipmentFilters,
@@ -109,11 +102,7 @@ function formatDate(value: string): string {
 // Shipment status
 // ---------------------------------------------
 
-function ShipmentStatus({
-  status,
-}: {
-  status: string;
-}) {
+function ShipmentStatus({ status }: { status: string }) {
   return (
     <span
       className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${getStatusStyle(status)}`}
@@ -129,9 +118,10 @@ function ShipmentStatus({
 
 function FiltersSkeleton() {
   return (
-    <div aria-label="Loading shipment filters"
-      className="grid gap-4 border-b border-slate-100 p-5 sm:p-6 lg:grid-cols-[1.5fr_1fr_1fr]">
-
+    <div
+      aria-label="Loading shipment filters"
+      className="grid gap-4 border-b border-slate-100 p-5 sm:p-6 lg:grid-cols-[1.5fr_1fr_1fr]"
+    >
       {Array.from({ length: 3 }, (_, index) => (
         <div key={index} className="space-y-2">
           <div className="h-4 w-20 animate-pulse rounded bg-slate-100 motion-reduce:animate-none" />
@@ -147,24 +137,15 @@ function FiltersSkeleton() {
 // Empty state
 // ---------------------------------------------
 
-function EmptyShipments({
-  hasFilters,
-}: {
-  hasFilters: boolean;
-}) {
+function EmptyShipments({ hasFilters }: { hasFilters: boolean }) {
   return (
     <div className="flex flex-col items-center px-6 py-16 text-center">
       <div className="flex size-14 items-center justify-center rounded-xl bg-[#E8F5F2] text-[#00877B]">
-        <PackageOpen
-          aria-hidden="true"
-          className="size-7"
-        />
+        <PackageOpen aria-hidden="true" className="size-7" />
       </div>
 
       <h2 className="mt-5 text-lg font-semibold text-[#102D46]">
-        {hasFilters
-          ? "No matching shipments"
-          : "No shipments yet"}
+        {hasFilters ? "No matching shipments" : "No shipments yet"}
       </h2>
 
       <p className="mt-2 max-w-sm text-sm leading-7 text-slate-500">
@@ -207,38 +188,23 @@ function ShipmentTable({
       <table className="w-full min-w-[760px] text-left text-sm">
         <thead className="bg-[#F8FAFC]">
           <tr className="text-xs text-slate-500">
-            <th
-              scope="col"
-              className="px-6 py-4 font-semibold"
-            >
+            <th scope="col" className="px-6 py-4 font-semibold">
               Tracking code
             </th>
 
-            <th
-              scope="col"
-              className="px-6 py-4 font-semibold"
-            >
+            <th scope="col" className="px-6 py-4 font-semibold">
               Route
             </th>
 
-            <th
-              scope="col"
-              className="px-6 py-4 font-semibold"
-            >
+            <th scope="col" className="px-6 py-4 font-semibold">
               Created
             </th>
 
-            <th
-              scope="col"
-              className="px-6 py-4 font-semibold"
-            >
+            <th scope="col" className="px-6 py-4 font-semibold">
               Status
             </th>
 
-            <th
-              scope="col"
-              className="px-6 py-4 font-semibold"
-            >
+            <th scope="col" className="px-6 py-4 font-semibold">
               Action
             </th>
           </tr>
@@ -265,9 +231,7 @@ function ShipmentTable({
 
                 <td className="px-6 py-5 text-[#102D46]">
                   {origin}
-                  <span className="mx-2 text-slate-400">
-                    →
-                  </span>
+                  <span className="mx-2 text-slate-400">→</span>
                   {destination}
                 </td>
 
@@ -276,21 +240,17 @@ function ShipmentTable({
                 </td>
 
                 <td className="px-6 py-5">
-                  <ShipmentStatus
-                    status={shipment.status}
-                  />
+                  <ShipmentStatus status={shipment.status} />
                 </td>
 
                 <td className="px-6 py-5">
-                  <span
-                    aria-disabled="true"
-                    title="Shipment details page coming in Step 24"
-                    className="cursor-not-allowed whitespace-nowrap text-xs font-semibold text-slate-400"
+                  <Link
+                    href={`/customer/shipments/${shipment.id}`}
+                    className="inline-flex items-center gap-2 whitespace-nowrap text-xs font-semibold text-[#00877B] transition-colors hover:text-[#006F66] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00877B]"
                   >
-                    {shipment.status === "DRAFT"
-                      ? "Review & pay"
-                      : "View details"}
-                  </span>
+                    View details
+                    <ArrowRight aria-hidden="true" className="size-4" />
+                  </Link>
                 </td>
               </tr>
             );
@@ -314,18 +274,11 @@ function ShipmentPagination({
   count: number;
   filters: ShipmentFilterValues;
 }) {
-  const {
-    page,
-    limit,
-    total,
-    totalPages,
-  } = pagination;
+  const { page, limit, total, totalPages } = pagination;
 
-  const first =
-    count === 0 ? 0 : (page - 1) * limit + 1;
+  const first = count === 0 ? 0 : (page - 1) * limit + 1;
 
-  const last =
-    count === 0 ? 0 : first + count - 1;
+  const last = count === 0 ? 0 : first + count - 1;
 
   const canGoPrevious = page > 1;
   const canGoNext = page < totalPages;
@@ -342,63 +295,36 @@ function ShipmentPagination({
         Showing {first}–{last} of {total}
       </p>
 
-      <nav
-        aria-label="Shipment pagination"
-        className="flex items-center gap-2"
-      >
+      <nav aria-label="Shipment pagination" className="flex items-center gap-2">
         {canGoPrevious ? (
           <Link
-            href={shipmentListHref(
-              filters,
-              page - 1,
-            )}
+            href={shipmentListHref(filters, page - 1)}
             prefetch={false}
             className={linkClass}
           >
-            <ArrowLeft
-              aria-hidden="true"
-              className="size-4"
-            />
+            <ArrowLeft aria-hidden="true" className="size-4" />
             Previous
           </Link>
         ) : (
-          <span
-            aria-disabled="true"
-            className={disabledClass}
-          >
-            <ArrowLeft
-              aria-hidden="true"
-              className="size-4"
-            />
+          <span aria-disabled="true" className={disabledClass}>
+            <ArrowLeft aria-hidden="true" className="size-4" />
             Previous
           </span>
         )}
 
         {canGoNext ? (
           <Link
-            href={shipmentListHref(
-              filters,
-              page + 1,
-            )}
+            href={shipmentListHref(filters, page + 1)}
             prefetch={false}
             className={linkClass}
           >
             Next
-            <ArrowRight
-              aria-hidden="true"
-              className="size-4"
-            />
+            <ArrowRight aria-hidden="true" className="size-4" />
           </Link>
         ) : (
-          <span
-            aria-disabled="true"
-            className={disabledClass}
-          >
+          <span aria-disabled="true" className={disabledClass}>
             Next
-            <ArrowRight
-              aria-hidden="true"
-              className="size-4"
-            />
+            <ArrowRight aria-hidden="true" className="size-4" />
           </span>
         )}
       </nav>
@@ -410,12 +336,8 @@ function ShipmentPagination({
 // Customer My Shipments page
 // ---------------------------------------------
 
-export default async function MyShipmentsPage({
-  searchParams,
-}: PageProps) {
-  const filters = parseShipmentFilters(
-    await searchParams,
-  );
+export default async function MyShipmentsPage({ searchParams }: PageProps) {
+  const filters = parseShipmentFilters(await searchParams);
 
   const [data, hubNames] = await Promise.all([
     getCustomerShipments(filters),
@@ -436,8 +358,7 @@ export default async function MyShipmentsPage({
         </h1>
 
         <p className="mt-3 text-sm leading-7 text-slate-600">
-          A clear view of your shipments,
-          from pickup to delivery.
+          A clear view of your shipments, from pickup to delivery.
         </p>
       </header>
 
@@ -449,11 +370,7 @@ export default async function MyShipmentsPage({
           title="Shipment creation is coming in a later step"
           className="inline-flex h-11 cursor-not-allowed items-center gap-2 rounded-lg bg-[#00877B] px-5 text-sm font-semibold text-white opacity-60"
         >
-          <Plus
-            aria-hidden="true"
-            className="size-4"
-          />
-
+          <Plus aria-hidden="true" className="size-4" />
           Create shipment
         </button>
       </div>
