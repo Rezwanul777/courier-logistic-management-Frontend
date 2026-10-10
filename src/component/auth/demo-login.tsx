@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { sessionUserSchema } from "@/lib/auth-schema";
 import { queryKeys } from "@/lib/query-keys";
+import { getPostLoginPath } from "./auth-redirect";
 
 const demoResponseSchema = z.object({
   success: z.literal(true),
@@ -94,7 +95,11 @@ export function DemoLogin({
 
       // Role-specific dashboards will be connected later.
       // /account is the currently implemented protected page.
-      window.location.replace("/account");
+
+window.location.replace(
+  getPostLoginPath(user.role),
+);
+
     } catch (error: unknown) {
       toast.error(
         error instanceof Error

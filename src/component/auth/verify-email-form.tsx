@@ -1,17 +1,11 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import {
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 
 import { AuthInput } from "@/component/auth/auth-input";
-import {
-  Alert,
-  AlertDescription,
-} from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FieldGroup } from "@/components/ui/field";
 
@@ -19,12 +13,9 @@ import { getErrorMessage } from "@/lib/api-errors";
 import { verifyEmail } from "@/lib/auth-api";
 import { verifyEmailSchema } from "@/lib/auth-schema";
 import { queryKeys } from "@/lib/query-keys";
+import { getPostLoginPath } from "./auth-redirect";
 
-export function VerifyEmailForm({
-  email = "",
-}: {
-  email?: string;
-}) {
+export function VerifyEmailForm({ email = "" }: { email?: string }) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -49,7 +40,8 @@ export function VerifyEmailForm({
         queryClient.setQueryData(queryKeys.session, user);
 
         form.reset();
-        window.location.replace("/account");
+
+        window.location.replace(getPostLoginPath(user.role));
       } catch {
         // Keep the fields available for correction.
       }
@@ -70,9 +62,7 @@ export function VerifyEmailForm({
     >
       {mutation.isError && (
         <Alert variant="destructive">
-          <AlertDescription>
-            {getErrorMessage(mutation.error)}
-          </AlertDescription>
+          <AlertDescription>{getErrorMessage(mutation.error)}</AlertDescription>
         </Alert>
       )}
 
@@ -83,32 +73,19 @@ export function VerifyEmailForm({
               <AuthInput
                 id={`verify-${name}`}
                 name={name}
-                label={
-                  name === "email"
-                    ? "Email address"
-                    : "Verification code"
-                }
+                label={name === "email" ? "Email address" : "Verification code"}
                 type={name === "email" ? "email" : "text"}
-                autoComplete={
-                  name === "email"
-                    ? "email"
-                    : "one-time-code"
-                }
-                inputMode={
-                  name === "otp" ? "numeric" : "email"
-                }
+                autoComplete={name === "email" ? "email" : "one-time-code"}
+                inputMode={name === "otp" ? "numeric" : "email"}
                 maxLength={name === "otp" ? 6 : 254}
                 placeholder={
-                  name === "otp"
-                    ? "6-digit code"
-                    : "you@example.com"
+                  name === "otp" ? "6-digit code" : "you@example.com"
                 }
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 disabled={mutation.isPending}
                 invalid={
-                  field.state.meta.isTouched &&
-                  !field.state.meta.isValid
+                  field.state.meta.isTouched && !field.state.meta.isValid
                 }
                 errors={field.state.meta.errors}
                 onValueChange={(value) => {
@@ -121,9 +98,7 @@ export function VerifyEmailForm({
         ))}
       </FieldGroup>
 
-      <form.Subscribe
-        selector={(state) => state.isSubmitting}
-      >
+      <form.Subscribe selector={(state) => state.isSubmitting}>
         {(pending) => (
           <Button
             type="submit"
