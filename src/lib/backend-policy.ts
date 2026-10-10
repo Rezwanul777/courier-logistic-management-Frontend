@@ -6,6 +6,7 @@ const allowedRoutes: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
   [/^auth\/me$/, ["GET"]],
   [/^users\/me$/, ["GET", "PATCH"]],
   [/^shipments$/, ["POST"]],
+  [/^shipments\/quote$/, ["POST"]],
   [/^shipments\/my$/, ["GET"]],
   [/^shipments\/[1-9]\d*$/, ["GET", "PATCH", "DELETE"]],
   [/^shipments\/[1-9]\d*\/tracking$/, ["GET"]],

@@ -52,7 +52,7 @@ const navigation: Record<
       label: "Create shipment",
       href: "/customer/shipments/new",
       icon: PackagePlus,
-      enabled: false,
+      enabled: true,
     },
     {
       label: "Payments",

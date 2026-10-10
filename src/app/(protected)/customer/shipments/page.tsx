@@ -364,15 +364,13 @@ export default async function MyShipmentsPage({ searchParams }: PageProps) {
 
       {/* Create shipment action */}
       <div>
-        <button
-          type="button"
-          disabled
-          title="Shipment creation is coming in a later step"
-          className="inline-flex h-11 cursor-not-allowed items-center gap-2 rounded-lg bg-[#00877B] px-5 text-sm font-semibold text-white opacity-60"
+        <Link
+          href="/customer/shipments/new"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#00877B] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#006F66]"
         >
           <Plus aria-hidden="true" className="size-4" />
           Create shipment
-        </button>
+        </Link>
       </div>
 
       {/* Shipments and filters */}
