@@ -1,23 +1,35 @@
+/** biome-ignore-all lint/suspicious/noArrayIndexKey: <explanation> */
+/** biome-ignore-all lint/a11y/useAriaPropsSupportedByRole: <explanation> */
+
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import {
   ArrowLeft,
   ArrowRight,
   PackageOpen,
   Plus,
-  Search,
 } from "lucide-react";
+
+
+import {
+  parseShipmentFilters,
+  shipmentListHref,
+  type ShipmentFilters as ShipmentFilterValues,
+} from "@/lib/shipment-filter";
 
 import {
   getCustomerShipments,
   getHubNames,
   type CustomerShipment,
 } from "@/lib/server/customer-shipments";
+import { ShipmentFilters } from "@/component/dashboard/shipment-filter";
 
 export const metadata: Metadata = {
   title: "My Shipments",
+  description: "Manage and track your CourierFlow shipments.",
   robots: {
     index: false,
     follow: false,
@@ -27,65 +39,59 @@ export const metadata: Metadata = {
 interface PageProps {
   searchParams: Promise<{
     page?: string | string[];
+    search?: string | string[];
+    status?: string | string[];
+    dateRange?: string | string[];
   }>;
 }
 
-function getPageNumber(
-  value: string | string[] | undefined,
-): number {
-  if (typeof value !== "string") {
-    return 1;
-  }
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
 
-  const page = Number(value);
+// ---------------------------------------------
+// Formatting utilities
+// ---------------------------------------------
 
-  return Number.isSafeInteger(page) &&
-    page >= 1 &&
-    page <= 10000
-    ? page
-    : 1;
+function formatStatus(status: string): string {
+  return status
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/^./, (char) => char.toUpperCase());
 }
 
 function getStatusStyle(status: string): string {
-  if (status === "DELIVERED") {
-    return "bg-emerald-50 text-emerald-700";
-  }
+  switch (status) {
+    case "DELIVERED":
+      return "bg-emerald-50 text-emerald-700";
 
-  if (status.includes("FAILED")) {
-    return "bg-red-50 text-red-700";
-  }
+    case "DELIVERY_FAILED":
+    case "CANCELLED":
+      return "bg-red-50 text-red-700";
 
-  if (status === "DRAFT") {
-    return "bg-slate-100 text-slate-600";
-  }
+    case "DRAFT":
+      return "bg-slate-100 text-slate-600";
 
-  if (status === "IN_TRANSIT") {
-    return "bg-blue-50 text-blue-700";
-  }
+    case "IN_TRANSIT":
+    case "OUT_FOR_DELIVERY":
+    case "RETURN_IN_TRANSIT":
+      return "bg-blue-50 text-blue-700";
 
-  return "bg-amber-50 text-amber-700";
+    case "READY_FOR_PICKUP":
+    case "PICKUP_ASSIGNED":
+    case "PICKED_UP":
+      return "bg-amber-50 text-amber-700";
+
+    default:
+      return "bg-teal-50 text-teal-700";
+  }
 }
 
-function ShipmentStatus({
-  status,
-}: {
-  status: string;
-}) {
-  const label = status
-    .replaceAll("_", " ")
-    .toLowerCase();
-
-  return (
-    <span
-      className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusStyle(status)}`}
-    >
-      {label}
-    </span>
-  );
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
+function formatDate(value: string): string {
+  const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
     return "—";
@@ -99,102 +105,101 @@ function formatDate(dateString: string): string {
   }).format(date);
 }
 
-function ShipmentFilters() {
+// ---------------------------------------------
+// Shipment status
+// ---------------------------------------------
+
+function ShipmentStatus({
+  status,
+}: {
+  status: string;
+}) {
   return (
-    <div className="grid gap-4 border-b border-slate-100 p-5 sm:p-6 lg:grid-cols-[1.5fr_1fr_1fr]">
-      <div>
-        <label
-          htmlFor="shipment-search"
-          className="mb-2 block text-xs font-semibold text-slate-600"
-        >
-          Search
-        </label>
+    <span
+      className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${getStatusStyle(status)}`}
+    >
+      {formatStatus(status)}
+    </span>
+  );
+}
 
-        <div className="relative">
-          <Search
-            aria-hidden="true"
-            className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
-          />
+// ---------------------------------------------
+// Filter loading skeleton
+// ---------------------------------------------
 
-          <input
-            id="shipment-search"
-            type="search"
-            disabled
-            placeholder="Search by tracking code..."
-            className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm placeholder:text-slate-400 disabled:cursor-not-allowed"
-          />
+function FiltersSkeleton() {
+  return (
+    <div aria-label="Loading shipment filters"
+      className="grid gap-4 border-b border-slate-100 p-5 sm:p-6 lg:grid-cols-[1.5fr_1fr_1fr]">
+
+      {Array.from({ length: 3 }, (_, index) => (
+        <div key={index} className="space-y-2">
+          <div className="h-4 w-20 animate-pulse rounded bg-slate-100 motion-reduce:animate-none" />
+
+          <div className="h-11 animate-pulse rounded-lg bg-slate-100 motion-reduce:animate-none" />
         </div>
-      </div>
-
-      <div>
-        <label
-          htmlFor="shipment-status-filter"
-          className="mb-2 block text-xs font-semibold text-slate-600"
-        >
-          Status
-        </label>
-
-        <select
-          id="shipment-status-filter"
-          disabled
-          className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 disabled:cursor-not-allowed"
-        >
-          <option>All statuses</option>
-        </select>
-      </div>
-
-      <div>
-        <label
-          htmlFor="shipment-date-filter"
-          className="mb-2 block text-xs font-semibold text-slate-600"
-        >
-          Date
-        </label>
-
-        <select
-          id="shipment-date-filter"
-          disabled
-          className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 disabled:cursor-not-allowed"
-        >
-          <option>All dates</option>
-        </select>
-      </div>
-
-      <p className="text-xs text-slate-500 lg:col-span-3">
-        Search and filtering will be enabled when
-        backend filtering is implemented.
-      </p>
+      ))}
     </div>
   );
 }
 
+// ---------------------------------------------
+// Empty state
+// ---------------------------------------------
+
+function EmptyShipments({
+  hasFilters,
+}: {
+  hasFilters: boolean;
+}) {
+  return (
+    <div className="flex flex-col items-center px-6 py-16 text-center">
+      <div className="flex size-14 items-center justify-center rounded-xl bg-[#E8F5F2] text-[#00877B]">
+        <PackageOpen
+          aria-hidden="true"
+          className="size-7"
+        />
+      </div>
+
+      <h2 className="mt-5 text-lg font-semibold text-[#102D46]">
+        {hasFilters
+          ? "No matching shipments"
+          : "No shipments yet"}
+      </h2>
+
+      <p className="mt-2 max-w-sm text-sm leading-7 text-slate-500">
+        {hasFilters
+          ? "No shipments match your current filters. Try a different tracking code, status, or date range."
+          : "Your shipment records will appear here after you create your first booking."}
+      </p>
+
+      {hasFilters && (
+        <Link
+          href="/customer/shipments"
+          className="mt-5 inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-5 text-sm font-semibold text-[#00877B] transition-colors hover:bg-[#E8F5F2]"
+        >
+          Clear all filters
+        </Link>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------
+// Shipment table
+// ---------------------------------------------
+
 function ShipmentTable({
   shipments,
   hubNames,
+  hasFilters,
 }: {
   shipments: CustomerShipment[];
   hubNames: Map<number, string>;
+  hasFilters: boolean;
 }) {
   if (shipments.length === 0) {
-    return (
-      <div className="px-6 py-16 text-center">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-xl bg-[#E8F5F2] text-[#00877B]">
-          <PackageOpen
-            aria-hidden="true"
-            className="size-7"
-          />
-        </div>
-
-        <h2 className="mt-5 text-lg font-semibold text-[#102D46]">
-          No shipments found
-        </h2>
-
-        <p className="mx-auto mt-2 max-w-sm text-sm leading-7 text-slate-500">
-          Your shipment records will appear here
-          after you create a booking.
-        </p>
-      </div>
-    );
+    return <EmptyShipments hasFilters={hasFilters} />;
   }
 
   return (
@@ -202,19 +207,38 @@ function ShipmentTable({
       <table className="w-full min-w-[760px] text-left text-sm">
         <thead className="bg-[#F8FAFC]">
           <tr className="text-xs text-slate-500">
-            <th scope="col" className="px-6 py-4 font-semibold">
+            <th
+              scope="col"
+              className="px-6 py-4 font-semibold"
+            >
               Tracking code
             </th>
-            <th scope="col" className="px-6 py-4 font-semibold">
+
+            <th
+              scope="col"
+              className="px-6 py-4 font-semibold"
+            >
               Route
             </th>
-            <th scope="col" className="px-6 py-4 font-semibold">
+
+            <th
+              scope="col"
+              className="px-6 py-4 font-semibold"
+            >
               Created
             </th>
-            <th scope="col" className="px-6 py-4 font-semibold">
+
+            <th
+              scope="col"
+              className="px-6 py-4 font-semibold"
+            >
               Status
             </th>
-            <th scope="col" className="px-6 py-4 font-semibold">
+
+            <th
+              scope="col"
+              className="px-6 py-4 font-semibold"
+            >
               Action
             </th>
           </tr>
@@ -240,7 +264,11 @@ function ShipmentTable({
                 </td>
 
                 <td className="px-6 py-5 text-[#102D46]">
-                  {origin} → {destination}
+                  {origin}
+                  <span className="mx-2 text-slate-400">
+                    →
+                  </span>
+                  {destination}
                 </td>
 
                 <td className="whitespace-nowrap px-6 py-5 text-slate-600">
@@ -256,8 +284,8 @@ function ShipmentTable({
                 <td className="px-6 py-5">
                   <span
                     aria-disabled="true"
-                    title="Shipment details page coming next"
-                    className="whitespace-nowrap text-xs font-medium text-slate-400"
+                    title="Shipment details page coming in Step 24"
+                    className="cursor-not-allowed whitespace-nowrap text-xs font-semibold text-slate-400"
                   >
                     {shipment.status === "DRAFT"
                       ? "Review & pay"
@@ -273,31 +301,40 @@ function ShipmentTable({
   );
 }
 
+// ---------------------------------------------
+// Pagination
+// ---------------------------------------------
+
 function ShipmentPagination({
-  page,
-  total,
-  totalPages,
+  pagination,
   count,
+  filters,
 }: {
-  page: number;
-  total: number;
-  totalPages: number;
+  pagination: Pagination;
   count: number;
+  filters: ShipmentFilterValues;
 }) {
+  const {
+    page,
+    limit,
+    total,
+    totalPages,
+  } = pagination;
+
   const first =
-    count === 0 ? 0 : (page - 1) * 10 + 1;
+    count === 0 ? 0 : (page - 1) * limit + 1;
 
   const last =
     count === 0 ? 0 : first + count - 1;
 
-  const previousEnabled = page > 1;
-  const nextEnabled = page < totalPages;
+  const canGoPrevious = page > 1;
+  const canGoNext = page < totalPages;
 
   const linkClass =
-    "inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-medium text-[#102D46] hover:bg-slate-50";
+    "inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-medium text-[#102D46] transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00877B]";
 
   const disabledClass =
-    "inline-flex h-9 items-center gap-2 rounded-lg border border-slate-100 px-3 text-sm text-slate-400";
+    "inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-lg border border-slate-100 px-3 text-sm text-slate-400";
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 px-6 py-5">
@@ -309,9 +346,13 @@ function ShipmentPagination({
         aria-label="Shipment pagination"
         className="flex items-center gap-2"
       >
-        {previousEnabled ? (
+        {canGoPrevious ? (
           <Link
-            href={`?page=${page - 1}`}
+            href={shipmentListHref(
+              filters,
+              page - 1,
+            )}
+            prefetch={false}
             className={linkClass}
           >
             <ArrowLeft
@@ -325,13 +366,21 @@ function ShipmentPagination({
             aria-disabled="true"
             className={disabledClass}
           >
+            <ArrowLeft
+              aria-hidden="true"
+              className="size-4"
+            />
             Previous
           </span>
         )}
 
-        {nextEnabled ? (
+        {canGoNext ? (
           <Link
-            href={`?page=${page + 1}`}
+            href={shipmentListHref(
+              filters,
+              page + 1,
+            )}
+            prefetch={false}
             className={linkClass}
           >
             Next
@@ -346,6 +395,10 @@ function ShipmentPagination({
             className={disabledClass}
           >
             Next
+            <ArrowRight
+              aria-hidden="true"
+              className="size-4"
+            />
           </span>
         )}
       </nav>
@@ -353,20 +406,31 @@ function ShipmentPagination({
   );
 }
 
+// ---------------------------------------------
+// Customer My Shipments page
+// ---------------------------------------------
+
 export default async function MyShipmentsPage({
   searchParams,
 }: PageProps) {
-  const params = await searchParams;
-  const page = getPageNumber(params.page);
+  const filters = parseShipmentFilters(
+    await searchParams,
+  );
 
   const [data, hubNames] = await Promise.all([
-    getCustomerShipments(page),
+    getCustomerShipments(filters),
     getHubNames(),
   ]);
 
+  const hasFilters =
+    Boolean(filters.search) ||
+    Boolean(filters.status) ||
+    filters.dateRange !== "all";
+
   return (
     <div className="space-y-6">
-      <div>
+      {/* Page heading */}
+      <header>
         <h1 className="text-3xl font-bold tracking-tight text-[#102D46]">
           My shipments
         </h1>
@@ -375,39 +439,47 @@ export default async function MyShipmentsPage({
           A clear view of your shipments,
           from pickup to delivery.
         </p>
-      </div>
+      </header>
 
+      {/* Create shipment action */}
       <div>
         <button
           type="button"
           disabled
-          title="Shipment creation will be available in a later step"
+          title="Shipment creation is coming in a later step"
           className="inline-flex h-11 cursor-not-allowed items-center gap-2 rounded-lg bg-[#00877B] px-5 text-sm font-semibold text-white opacity-60"
         >
           <Plus
             aria-hidden="true"
             className="size-4"
           />
+
           Create shipment
         </button>
       </div>
 
+      {/* Shipments and filters */}
       <section
         aria-label="My shipment records"
         className="overflow-hidden rounded-xl border border-slate-200 bg-white"
       >
-        <ShipmentFilters />
+        {/* URL-synchronized filters */}
+        <Suspense fallback={<FiltersSkeleton />}>
+          <ShipmentFilters />
+        </Suspense>
 
+        {/* Real backend shipment records */}
         <ShipmentTable
           shipments={data.items}
           hubNames={hubNames}
+          hasFilters={hasFilters}
         />
 
+        {/* Preserve filters while changing pages */}
         <ShipmentPagination
-          page={data.pagination.page}
-          total={data.pagination.total}
-          totalPages={data.pagination.totalPages}
+          pagination={data.pagination}
           count={data.items.length}
+          filters={filters}
         />
       </section>
     </div>

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { apiResponseSchema } from "@/lib/api-schemas";
 import { filterAuthCookies } from "@/lib/backend-policy";
 import { getServerConfig } from "@/lib/env";
+import { ShipmentFilters } from "../shipment-filter";
 
 const shipmentSchema = z.object({
   id: z.number().int().positive(),
@@ -37,10 +38,12 @@ export type CustomerShipment = z.infer<
   typeof shipmentSchema
 >;
 
+
 export async function getCustomerShipments(
-  page: number,
+  filters: ShipmentFilters,
 ) {
   const cookieStore = await cookies();
+
   const accessToken =
     cookieStore.get("accessToken")?.value;
 
@@ -59,13 +62,26 @@ export async function getCustomerShipments(
   const { backendApiUrl } = getServerConfig();
 
   const params = new URLSearchParams({
-    page: String(page),
+    page: String(filters.page),
     limit: "10",
   });
 
+  if (filters.search) {
+    params.set("search", filters.search);
+  }
+
+  if (filters.status) {
+    params.set("status", filters.status);
+  }
+
+  if (filters.dateRange !== "all") {
+    params.set("dateRange", filters.dateRange);
+  }
+
   const response = await fetch(
-    `${backendApiUrl}/shipments/my?${params}`,
+    `${backendApiUrl}/shipments/my?${params.toString()}`,
     {
+      method: "GET",
       headers: {
         Accept: "application/json",
         Cookie: authCookie,
@@ -98,6 +114,7 @@ export async function getCustomerShipments(
 
   return result.data.data;
 }
+
 
 export async function getHubNames(): Promise<
   Map<number, string>
