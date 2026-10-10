@@ -30,6 +30,7 @@ import {
 } from "@/lib/shipment-draft.schema";
 
 import type { ShipmentHub } from "@/lib/server/shipment-hubs";
+import { ShipmentReviewStep } from "@/app/(protected)/customer/shipment-review-step";
 
 
 
@@ -535,7 +536,7 @@ export function CreateShipmentWizard({
           onContinue={continueFromParcel}
         />
       ) : (
-        <ReviewStepPreview
+        <ShipmentReviewStep
           pickup={pickupDetails}
           parcel={parcelDetails}
           hubs={hubs}
