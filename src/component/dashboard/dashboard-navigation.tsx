@@ -79,7 +79,7 @@ const navigation: Record<
       label: "Shipments",
       href: "/admin/shipments",
       icon: Package,
-      enabled: false,
+      enabled: true,
     },
     {
       label: "Couriers",

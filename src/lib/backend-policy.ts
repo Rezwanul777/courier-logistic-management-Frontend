@@ -19,6 +19,9 @@ const allowedRoutes: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
   [/^admin\/(zones|hubs|rates)\/[1-9]\d*$/, ["PATCH", "DELETE"]],
   [/^admin\/tasks\/assign-pickup$/, ["POST"]],
   [/^admin\/shipments\/[1-9]\d*\/assign-delivery$/, ["POST"]],
+
+[/^admin\/shipments\/[1-9]\d*$/, ["GET"]],
+
   [
     /^admin\/hub-transfers\/[1-9]\d*\/(origin-receive|dispatch|destination-receive)$/,
     ["POST"],
