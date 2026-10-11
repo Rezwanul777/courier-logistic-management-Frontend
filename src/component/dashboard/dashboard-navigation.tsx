@@ -73,7 +73,7 @@ const navigation: Record<
       label: "Overview",
       href: "/admin",
       icon: LayoutDashboard,
-      enabled: false,
+      enabled: true,
     },
     {
       label: "Shipments",

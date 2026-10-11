@@ -1,4 +1,5 @@
 
+
 import type { SessionUser } from "@/lib/auth-schema";
 
 export function getPostLoginPath(
@@ -9,11 +10,11 @@ export function getPostLoginPath(
       return "/customer";
 
     case "ADMIN":
-      // Update when Admin dashboard is ready.
-      return "/account";
+      return "/admin";
 
     case "COURIER":
-      // Update when Courier dashboard is ready.
       return "/account";
   }
 }
+
+
