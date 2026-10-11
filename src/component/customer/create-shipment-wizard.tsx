@@ -35,11 +35,6 @@ import { ShipmentReviewStep } from "@/app/(protected)/customer/shipment-review-s
 
 
 
-
-
-
-
-
 // --------------------------------------
 // Wizard stages
 // --------------------------------------

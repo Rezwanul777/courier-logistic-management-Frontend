@@ -1,36 +1,35 @@
 /** biome-ignore-all lint/a11y/useSemanticElements: <explanation> */
-
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import Link from "next/link";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import {
   ArrowLeft,
   CreditCard,
+  LoaderCircle,
   MapPin,
   Package,
   RefreshCcw,
 } from "lucide-react";
 
-import {
-  requestShipmentQuote,
-  type ShippingQuote,
-} from "@/lib/shipment-quote";
+import { ApiError, getErrorMessage } from "@/lib/api-errors";
 
-import { getErrorMessage } from "@/lib/api-errors";
+import {
+  createCheckoutSession,
+  createCustomerShipment,
+  type CreatedShipment,
+} from "@/lib/shipment-checkout";
+
+import { requestShipmentQuote, type ShippingQuote } from "@/lib/shipment-quote";
 
 import type {
   ParcelRouteValues,
   PickupRecipientValues,
 } from "@/lib/shipment-draft.schema";
 
-import type {
-  ShipmentHub,
-} from "@/lib/server/shipment-hubs";
-
-// --------------------------------------
-// Component props
-// --------------------------------------
+import type { ShipmentHub } from "@/lib/server/shipment-hubs";
 
 interface ShipmentReviewStepProps {
   pickup: PickupRecipientValues;
@@ -39,38 +38,33 @@ interface ShipmentReviewStepProps {
   onBack: () => void;
 }
 
-// --------------------------------------
-// Currency formatting
-// --------------------------------------
+// -----------------------------------------
+// Helpers
+// -----------------------------------------
 
-function formatShippingAmount(
-  amountMinor: number,
-  currency: string,
-): string {
+function formatShippingAmount(amountMinor: number, currency: string): string {
   try {
-    const formatter = new Intl.NumberFormat(
-      "en-US",
-      {
-        style: "currency",
-        currency,
-      },
-    );
+    const formatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    });
 
-    const fractionDigits =
-      formatter.resolvedOptions()
-        .maximumFractionDigits ?? 2;
+    const digits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
 
-    return formatter.format(
-      amountMinor / 10 ** fractionDigits,
-    );
+    return formatter.format(amountMinor / 10 ** digits);
   } catch {
     return `${currency} ${amountMinor} minor units`;
   }
 }
 
-// --------------------------------------
-// Reusable information row
-// --------------------------------------
+function isUncertainBookingError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.code === "NETWORK" ||
+      error.code === "INVALID_RESPONSE" ||
+      error.status >= 500)
+  );
+}
 
 function ReviewItem({
   label,
@@ -100,10 +94,6 @@ function ReviewItem({
   );
 }
 
-// --------------------------------------
-// Shipping quote loading skeleton
-// --------------------------------------
-
 function QuoteSkeleton() {
   return (
     <div
@@ -111,24 +101,13 @@ function QuoteSkeleton() {
       aria-label="Calculating shipping quote"
       className="space-y-5"
     >
-      <div className="h-4 w-36 animate-pulse rounded bg-slate-200 motion-reduce:animate-none" />
-
-      <div className="h-10 w-44 animate-pulse rounded-lg bg-slate-200 motion-reduce:animate-none" />
-
-      <div className="h-4 w-full animate-pulse rounded bg-slate-100 motion-reduce:animate-none" />
-
-      <div className="h-11 w-full animate-pulse rounded-lg bg-slate-100 motion-reduce:animate-none" />
-
-      <span className="sr-only">
-        Calculating your shipping total.
-      </span>
+      <div className="h-4 w-36 animate-pulse rounded bg-slate-200" />
+      <div className="h-10 w-44 animate-pulse rounded bg-slate-200" />
+      <div className="h-20 animate-pulse rounded bg-slate-100" />
+      <div className="h-11 animate-pulse rounded bg-slate-100" />
     </div>
   );
 }
-
-// --------------------------------------
-// Shipping quote error state
-// --------------------------------------
 
 function QuoteError({
   message,
@@ -148,56 +127,55 @@ function QuoteError({
         Shipping quote unavailable
       </h3>
 
-      <p className="mt-2 text-sm leading-7 text-red-700">
-        {message}
-      </p>
+      <p className="mt-2 text-sm leading-7 text-red-700">{message}</p>
 
       <button
         type="button"
         disabled={retrying}
         onClick={onRetry}
-        className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
+        className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-700 disabled:opacity-50"
       >
-        <RefreshCcw
-          aria-hidden="true"
-          className={`size-4 ${
-            retrying ? "animate-spin" : ""
-          }`}
-        />
-
+        <RefreshCcw className="size-4" />
         {retrying ? "Retrying..." : "Try again"}
       </button>
     </div>
   );
 }
 
-// --------------------------------------
-// Verified shipping quote
-// --------------------------------------
+// -----------------------------------------
+// Quote and Stripe Checkout UI
+// -----------------------------------------
+
+interface QuoteDetailsProps {
+  quote: ShippingQuote;
+  onRefresh: () => void;
+  refreshing: boolean;
+  onCheckout: () => void;
+  checkoutPending: boolean;
+  checkoutError: unknown;
+  createdShipment: CreatedShipment | null;
+  bookingUncertain: boolean;
+  quoteFailed: boolean;
+}
 
 function QuoteDetails({
   quote,
   onRefresh,
   refreshing,
-}: {
-  quote: ShippingQuote;
-  onRefresh: () => void;
-  refreshing: boolean;
-}) {
-  const formattedAmount = formatShippingAmount(
-    quote.amountMinor,
-    quote.currency,
-  );
-
+  onCheckout,
+  checkoutPending,
+  checkoutError,
+  createdShipment,
+  bookingUncertain,
+  quoteFailed,
+}: QuoteDetailsProps) {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-medium text-slate-500">
-          Shipping total
-        </p>
+        <p className="text-sm font-medium text-slate-500">Shipping total</p>
 
         <p className="mt-3 break-words text-4xl font-bold tracking-tight text-[#102D46]">
-          {formattedAmount}
+          {formatShippingAmount(quote.amountMinor, quote.currency)}
         </p>
 
         <p className="mt-2 text-xs text-slate-500">
@@ -211,88 +189,162 @@ function QuoteDetails({
         </p>
 
         <p className="mt-2 text-xs leading-6 text-[#155E53]">
-          This amount comes from the active
-          shipping rate configured in CourierFlow.
+          This amount comes from the active shipping rate configured in
+          CourierFlow. The backend verifies it again when creating your
+          shipment.
         </p>
       </div>
 
       <div className="space-y-3 border-t border-slate-100 pt-5 text-sm">
         <div className="flex justify-between gap-4">
-          <span className="text-slate-500">
-            Parcel weight
-          </span>
-
+          <span className="text-slate-500">Parcel weight</span>
           <span className="font-semibold text-[#102D46]">
             {quote.weight} kg
           </span>
         </div>
 
         <div className="flex justify-between gap-4">
-          <span className="text-slate-500">
-            Rate card
-          </span>
-
+          <span className="text-slate-500">Rate card</span>
           <span className="font-semibold text-[#102D46]">
             #{quote.rateCardId}
           </span>
         </div>
 
         <div className="flex justify-between gap-4">
-          <span className="text-slate-500">
-            Rate version
-          </span>
-
+          <span className="text-slate-500">Rate version</span>
           <span className="font-semibold text-[#102D46]">
             {quote.rateCardVersion}
           </span>
         </div>
       </div>
 
-      <button
-        type="button"
-        disabled={refreshing}
-        onClick={onRefresh}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-[#00877B] transition-colors hover:text-[#006F66] disabled:opacity-50"
-      >
-        <RefreshCcw
-          aria-hidden="true"
-          className={`size-4 ${
-            refreshing ? "animate-spin" : ""
-          }`}
-        />
+      {!createdShipment && !bookingUncertain && (
+        <button
+          type="button"
+          disabled={refreshing || checkoutPending}
+          onClick={onRefresh}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[#00877B] disabled:opacity-50"
+        >
+          <RefreshCcw
+            className={refreshing ? "size-4 animate-spin" : "size-4"}
+          />
 
-        {refreshing
-          ? "Refreshing quote..."
-          : "Refresh quote"}
-      </button>
+          {refreshing ? "Refreshing quote..." : "Refresh quote"}
+        </button>
+      )}
+
+      {createdShipment && (
+        <div
+          role="status"
+          className="rounded-lg border border-amber-200 bg-amber-50 p-4"
+        >
+          <p className="text-sm font-semibold text-amber-900">
+            Draft shipment created
+          </p>
+
+          <p className="mt-2 break-all text-sm text-amber-800">
+            {createdShipment.trackingCode}
+          </p>
+
+          <p className="mt-2 text-xs leading-6 text-amber-800">
+            Your shipment is saved. Payment has not been confirmed yet.
+          </p>
+
+          <Link
+            href={`/customer/shipments/${createdShipment.id}`}
+            className="mt-3 inline-block text-sm font-semibold text-[#00877B] hover:underline"
+          >
+            View saved shipment
+          </Link>
+        </div>
+      )}
+
+      {bookingUncertain && (
+        <div
+          role="alert"
+          className="rounded-lg border border-amber-200 bg-amber-50 p-4"
+        >
+          <p className="text-sm font-semibold text-amber-900">
+            Booking status needs checking
+          </p>
+
+          <p className="mt-2 text-sm leading-6 text-amber-800">
+            The server response was interrupted. A draft may already have been
+            saved. Check My Shipments before attempting another booking.
+          </p>
+
+          <Link
+            href="/customer/shipments"
+            className="mt-3 inline-block text-sm font-semibold text-[#00877B] hover:underline"
+          >
+            Check My Shipments
+          </Link>
+        </div>
+      )}
+
+      {quoteFailed && !createdShipment && (
+        <div
+          role="alert"
+          className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"
+        >
+          Quote refresh failed. Refresh the quotation before continuing.
+        </div>
+      )}
+
+      {Boolean(checkoutError) && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 p-4"
+        >
+          <p className="text-sm font-semibold text-red-800">
+            Unable to continue checkout
+          </p>
+
+          <p className="mt-2 text-sm leading-6 text-red-700">
+            {getErrorMessage(checkoutError)}
+          </p>
+
+          {!createdShipment && !bookingUncertain && (
+            <p className="mt-2 text-xs text-red-700">
+              If your shipping rate changed, refresh the quote and try again.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="border-t border-slate-100 pt-5">
         <button
           type="button"
-          disabled
-          title="Stripe Checkout will be integrated in the next step"
-          className="inline-flex h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-[#00877B] px-5 text-sm font-semibold text-white opacity-60"
+          onClick={onCheckout}
+          disabled={
+            checkoutPending || refreshing || bookingUncertain || quoteFailed
+          }
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#00877B] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#006F66] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <CreditCard
-            aria-hidden="true"
-            className="size-4"
-          />
+          {checkoutPending ? (
+            <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+          ) : (
+            <CreditCard aria-hidden="true" className="size-4" />
+          )}
 
-          Continue to Stripe
+          {checkoutPending
+            ? "Preparing secure checkout..."
+            : createdShipment
+              ? "Retry Stripe Checkout"
+              : "Continue to Stripe"}
         </button>
 
         <p className="mt-3 text-center text-xs leading-6 text-slate-500">
-          Secure checkout will be enabled after
-          shipment creation is connected.
+          Payment is confirmed only after Stripe webhook verification.
         </p>
       </div>
     </div>
   );
 }
 
-// --------------------------------------
-// Main review component
-// --------------------------------------
+// -----------------------------------------
+// Main Review and Pay component
+// -----------------------------------------
 
 export function ShipmentReviewStep({
   pickup,
@@ -300,14 +352,19 @@ export function ShipmentReviewStep({
   hubs,
   onBack,
 }: ShipmentReviewStepProps) {
-  const originHub = hubs.find(
-    (hub) =>
-      String(hub.id) === parcel.originHubId,
-  );
+  const [createdShipment, setCreatedShipment] =
+    useState<CreatedShipment | null>(null);
+
+  const [bookingUncertain, setBookingUncertain] = useState(false);
+
+  // Prevent two rapid clicks before React
+  // finishes updating the mutation state.
+  const submissionLock = useRef(false);
+
+  const originHub = hubs.find((hub) => String(hub.id) === parcel.originHubId);
 
   const destinationHub = hubs.find(
-    (hub) =>
-      String(hub.id) === parcel.destinationHubId,
+    (hub) => String(hub.id) === parcel.destinationHubId,
   );
 
   const quoteQuery = useQuery({
@@ -319,22 +376,87 @@ export function ShipmentReviewStep({
       parcel.weight,
     ],
 
-    queryFn: () =>
-      requestShipmentQuote(parcel),
+    queryFn: () => requestShipmentQuote(parcel),
 
-    // Never treat a previously fetched price
-    // as permanently current.
+    enabled: !createdShipment,
+
     staleTime: 0,
     gcTime: 0,
-
     retry: false,
     refetchOnMount: "always",
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
 
+  const checkoutMutation = useMutation({
+    mutationFn: async () => {
+      let shipment = createdShipment;
+
+      if (!shipment) {
+        const quote = quoteQuery.data;
+
+        if (!quote || quoteQuery.isFetching || quoteQuery.isError) {
+          throw new Error("A current shipping quote is required.");
+        }
+
+        try {
+          shipment = await createCustomerShipment({
+            pickup,
+            parcel,
+            quote,
+          });
+
+          // Save the real shipment ID immediately.
+          // If Stripe fails, retry checkout for
+          // this shipment instead of creating
+          // another one.
+          setCreatedShipment(shipment);
+        } catch (error: unknown) {
+          // A network failure does not prove the
+          // POST was rolled back. Do not blindly
+          // create a second shipment.
+          if (isUncertainBookingError(error)) {
+            setBookingUncertain(true);
+          }
+
+          throw error;
+        }
+      }
+
+      return createCheckoutSession(shipment.id);
+    },
+
+    retry: false,
+  });
+
   function refreshQuote() {
-    void quoteQuery.refetch();
+    if (!createdShipment && !bookingUncertain && !checkoutMutation.isPending) {
+      void quoteQuery.refetch();
+    }
+  }
+
+  async function handleCheckout() {
+    if (
+      submissionLock.current ||
+      checkoutMutation.isPending ||
+      bookingUncertain
+    ) {
+      return;
+    }
+
+    submissionLock.current = true;
+
+    try {
+      const checkoutUrl = await checkoutMutation.mutateAsync();
+
+      // Real Stripe-hosted checkout.
+      window.location.assign(checkoutUrl);
+    } catch {
+      // React Query stores the error.
+      // QuoteDetails displays it.
+    } finally {
+      submissionLock.current = false;
+    }
   }
 
   const route = [
@@ -343,22 +465,18 @@ export function ShipmentReviewStep({
   ].join(" → ");
 
   const parcelDescription =
-    parcel.description.trim() ||
-    "Description not provided";
+    parcel.description.trim() || "Description not provided";
 
   return (
     <div className="space-y-6">
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-        {/* Left: shipment review */}
+        {/* Left panel: shipment details */}
         <section
           aria-labelledby="shipment-review-heading"
           className="rounded-xl border border-slate-200 bg-white p-5 sm:p-8"
         >
           <div className="flex items-center gap-3">
-            <MapPin
-              aria-hidden="true"
-              className="size-5 text-[#00877B]"
-            />
+            <MapPin aria-hidden="true" className="size-5 text-[#00877B]" />
 
             <h2
               id="shipment-review-heading"
@@ -369,8 +487,8 @@ export function ShipmentReviewStep({
           </div>
 
           <p className="mt-4 text-sm leading-7 text-slate-600">
-            Please check your shipment information
-            before confirming your booking.
+            Please check your shipment information before confirming your
+            booking.
           </p>
 
           <dl className="mt-8 space-y-7">
@@ -390,10 +508,7 @@ export function ShipmentReviewStep({
 
             <div className="border-t border-slate-100" />
 
-            <ReviewItem
-              label="Route"
-              value={route}
-            />
+            <ReviewItem label="Route" value={route} />
 
             <div className="border-t border-slate-100" />
 
@@ -407,28 +522,26 @@ export function ShipmentReviewStep({
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 px-6 text-sm font-semibold text-[#102D46] transition-colors hover:bg-slate-50"
+              disabled={
+                checkoutMutation.isPending ||
+                Boolean(createdShipment) ||
+                bookingUncertain
+              }
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 px-6 text-sm font-semibold text-[#102D46] transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <ArrowLeft
-                aria-hidden="true"
-                className="size-4"
-              />
-
+              <ArrowLeft aria-hidden="true" className="size-4" />
               Back
             </button>
           </div>
         </section>
 
-        {/* Right: actual shipping quote */}
+        {/* Right panel: quote and checkout */}
         <section
           aria-labelledby="shipping-quote-heading"
           className="rounded-xl border border-slate-200 bg-white p-5 sm:p-8"
         >
           <div className="flex items-center gap-3">
-            <Package
-              aria-hidden="true"
-              className="size-5 text-[#00877B]"
-            />
+            <Package aria-hidden="true" className="size-5 text-[#00877B]" />
 
             <h2
               id="shipping-quote-heading"
@@ -438,34 +551,42 @@ export function ShipmentReviewStep({
             </h2>
           </div>
 
-
-<div className="mt-8" aria-live="polite">
-  {quoteQuery.isPending ? (
-    <QuoteSkeleton />
-  ) : quoteQuery.isError ? (
-    <QuoteError
-      message={getErrorMessage(quoteQuery.error)}
-      onRetry={refreshQuote}
-      retrying={quoteQuery.isFetching}
-    />
-  ) : (
-    <QuoteDetails
-      quote={quoteQuery.data}
-      onRefresh={refreshQuote}
-      refreshing={quoteQuery.isFetching}
-    />
-  )}
-</div>
-
+          <div className="mt-8" aria-live="polite">
+            {quoteQuery.isPending ? (
+              <QuoteSkeleton />
+            ) : quoteQuery.isError && !quoteQuery.data ? (
+              <QuoteError
+                message={getErrorMessage(quoteQuery.error)}
+                onRetry={refreshQuote}
+                retrying={quoteQuery.isFetching}
+              />
+            ) : quoteQuery.data ? (
+              <QuoteDetails
+                quote={quoteQuery.data}
+                onRefresh={refreshQuote}
+                refreshing={quoteQuery.isFetching}
+                onCheckout={() => {
+                  void handleCheckout();
+                }}
+                checkoutPending={checkoutMutation.isPending}
+                checkoutError={checkoutMutation.error}
+                createdShipment={createdShipment}
+                bookingUncertain={bookingUncertain}
+                quoteFailed={quoteQuery.isError}
+              />
+            ) : (
+              <p className="text-sm text-slate-500">
+                Shipping quote unavailable.
+              </p>
+            )}
+          </div>
         </section>
       </div>
 
       <p className="text-xs leading-6 text-slate-500">
-        Your shipment is not booked yet. The quote
-        will be recalculated by the backend before
-        creating the shipment. Payment will be
-        confirmed only after Stripe webhook
-        verification.
+        The backend verifies the shipping price again before booking. Creating a
+        draft does not confirm payment. Only a verified Stripe webhook can mark
+        the shipment paid.
       </p>
     </div>
   );

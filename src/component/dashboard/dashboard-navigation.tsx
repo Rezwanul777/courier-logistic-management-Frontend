@@ -58,7 +58,7 @@ const navigation: Record<
       label: "Payments",
       href: "/customer/payments",
       icon: CreditCard,
-      enabled: false,
+      enabled: true,
     },
     {
       label: "My profile",

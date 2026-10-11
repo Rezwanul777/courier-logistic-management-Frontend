@@ -24,6 +24,9 @@ const allowedRoutes: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
   ],
   [/^tasks\/me\/tasks$/, ["GET"]],
   [/^tasks\/[1-9]\d*\/(accept|pickup|start-delivery|deliver)$/, ["POST"]],
+
+  [/^payments\/my$/, ["GET"]],
+
   [/^payments\/checkout$/, ["POST"]],
   [/^payments\/shipment\/[1-9]\d*$/, ["GET"]],
 ];
