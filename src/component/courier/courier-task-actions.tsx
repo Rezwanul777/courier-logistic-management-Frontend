@@ -11,6 +11,11 @@ import {
 
 import { useRouter } from "next/navigation";
 
+
+import {
+  DeliveryTaskActions,
+} from "@/component/courier/delivery-task-actions";
+
 import {
   CheckCircle2,
   LoaderCircle,
@@ -138,20 +143,26 @@ export function CourierTaskActions({
   // Unsupported task types
   // -------------------------------------------
 
-  if (task.type !== "PICKUP") {
-    return (
-      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm font-semibold text-[#102D46]">
-          Delivery task
-        </p>
 
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          Delivery completion actions will be
-          enabled in the delivery workflow step.
-        </p>
-      </div>
-    );
-  }
+if (task.type === "DELIVERY") {
+  return (
+    <DeliveryTaskActions
+      task={{
+        id: task.id,
+        status: task.status,
+      }}
+    />
+  );
+}
+
+if (task.type !== "PICKUP") {
+  return (
+    <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
+      No actions are available for this task type.
+    </p>
+  );
+}
+
 
   // -------------------------------------------
   // Completed pickup
