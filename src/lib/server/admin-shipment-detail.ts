@@ -9,6 +9,10 @@ import { apiResponseSchema } from "@/lib/api-schemas";
 import { filterAuthCookies } from "@/lib/backend-policy";
 import { getServerConfig } from "@/lib/env";
 
+// ---------------------------------------------
+// Customer schema
+// ---------------------------------------------
+
 const customerSchema = z.object({
   id: z.number().int().positive(),
   name: z.string().nullable(),
@@ -16,12 +20,20 @@ const customerSchema = z.object({
   phone: z.string().nullable(),
 });
 
+// ---------------------------------------------
+// Hub schema
+// ---------------------------------------------
+
 const hubSchema = z.object({
   id: z.number().int().positive(),
   name: z.string(),
   code: z.string(),
   address: z.string(),
 });
+
+// ---------------------------------------------
+// Payment schema
+// ---------------------------------------------
 
 const paymentSchema = z.object({
   status: z.string(),
@@ -31,6 +43,10 @@ const paymentSchema = z.object({
   paidAt: z.string().nullable(),
 });
 
+// ---------------------------------------------
+// Tracking event schema
+// ---------------------------------------------
+
 const trackingEventSchema = z.object({
   id: z.number().int().positive(),
   previousStatus: z.string().nullable(),
@@ -38,6 +54,10 @@ const trackingEventSchema = z.object({
   reason: z.string().nullable(),
   occurredAt: z.string(),
 });
+
+// ---------------------------------------------
+// Courier task schema
+// ---------------------------------------------
 
 const courierTaskSchema = z.object({
   id: z.number().int().positive(),
@@ -53,6 +73,36 @@ const courierTaskSchema = z.object({
     email: z.string(),
   }),
 });
+
+// ---------------------------------------------
+// NEW: Hub transfer schema
+// ---------------------------------------------
+
+const hubTransferSchema = z.object({
+  id: z.number().int().positive(),
+
+  status: z.enum([
+    "DISPATCHED",
+    "RECEIVED",
+  ]),
+
+  createdAt: z.string(),
+  receivedAt: z.string().nullable(),
+
+  fromHub: z.object({
+    id: z.number().int().positive(),
+    name: z.string(),
+  }),
+
+  toHub: z.object({
+    id: z.number().int().positive(),
+    name: z.string(),
+  }),
+});
+
+// ---------------------------------------------
+// Complete Admin shipment detail schema
+// ---------------------------------------------
 
 const adminShipmentDetailSchema = z.object({
   id: z.number().int().positive(),
@@ -78,11 +128,18 @@ const adminShipmentDetailSchema = z.object({
 
   trackingEvents: z.array(trackingEventSchema),
   courierTasks: z.array(courierTaskSchema),
+
+  // Step 31H
+  hubTransfers: z.array(hubTransferSchema),
 });
 
 export type AdminShipmentDetail = z.infer<
   typeof adminShipmentDetailSchema
 >;
+
+// ---------------------------------------------
+// Fetch Admin shipment details
+// ---------------------------------------------
 
 export async function getAdminShipmentDetail(
   rawId: string,
@@ -149,9 +206,11 @@ export async function getAdminShipmentDetail(
     );
   }
 
+  const payload: unknown = await response.json();
+
   const parsed = apiResponseSchema(
     adminShipmentDetailSchema,
-  ).safeParse(await response.json());
+  ).safeParse(payload);
 
   if (!parsed.success) {
     throw new Error(
