@@ -85,7 +85,7 @@ const navigation: Record<
       label: "Couriers",
       href: "/admin/couriers",
       icon: Truck,
-      enabled: false,
+      enabled: true,
     },
     {
       label: "Users",
@@ -118,7 +118,7 @@ const navigation: Record<
       label: "My tasks",
       href: "/courier",
       icon: ClipboardList,
-      enabled: false,
+      enabled: true,
     },
     {
       label: "Task history",

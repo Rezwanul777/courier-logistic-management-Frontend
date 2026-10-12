@@ -13,7 +13,7 @@ export function getPostLoginPath(
       return "/admin";
 
     case "COURIER":
-      return "/account";
+      return "/courier";
 
     default:
       return "/login";
