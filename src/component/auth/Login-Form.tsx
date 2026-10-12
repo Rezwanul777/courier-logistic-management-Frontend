@@ -20,7 +20,7 @@ import { login } from "@/lib/auth-api";
 import { loginSchema } from "@/lib/auth-schema";
 import { queryKeys } from "@/lib/query-keys";
 import Link from "next/link";
-import { getPostLoginPath } from "./auth-redirect";
+import { getPostLoginPath } from "@/lib/auth-redirect";
 
 
 export function LoginForm() {
