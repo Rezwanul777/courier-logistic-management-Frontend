@@ -124,7 +124,7 @@ const navigation: Record<
       label: "Task history",
       href: "/courier/history",
       icon: History,
-      enabled: false,
+      enabled: true,
     },
     {
       label: "My profile",

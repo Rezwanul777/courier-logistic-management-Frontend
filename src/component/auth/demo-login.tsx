@@ -15,7 +15,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { sessionUserSchema } from "@/lib/auth-schema";
 import { queryKeys } from "@/lib/query-keys";
-import { getPostLoginPath } from "./auth-redirect";
+
+import { getPostLoginPath } from "@/lib/auth-redirect";
 
 const demoResponseSchema = z.object({
   success: z.literal(true),

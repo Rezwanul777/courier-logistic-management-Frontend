@@ -1,20 +1,9 @@
 
 
-import type { SessionUser } from "@/lib/auth-schema";
 
-export function getPostLoginPath(
-  role: SessionUser["role"],
-): string {
-  switch (role) {
-    case "CUSTOMER":
-      return "/customer";
 
-    case "ADMIN":
-      return "/admin";
 
-    case "COURIER":
-      return "/account";
-  }
-}
+export { getPostLoginPath } from "@/lib/auth-redirect";
+
 
 

@@ -88,7 +88,7 @@ export type CourierTaskTypeFilter =
 // Private authenticated fetch
 // ---------------------------------------------
 
-async function fetchCourierData(
+export async function fetchCourierData(
   path: string,
 ): Promise<unknown> {
   const cookieStore = await cookies();
