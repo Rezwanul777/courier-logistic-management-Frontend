@@ -91,19 +91,19 @@ const navigation: Record<
       label: "Users",
       href: "/admin/users",
       icon: UsersRound,
-      enabled: false,
+      enabled: true,
     },
     {
       label: "Hubs & zones",
       href: "/admin/hubs",
       icon: MapPinned,
-      enabled: false,
+      enabled: true,
     },
     {
       label: "Rate cards",
       href: "/admin/rates",
       icon: Wallet,
-      enabled: false,
+      enabled: true,
     },
     {
       label: "Audit logs",

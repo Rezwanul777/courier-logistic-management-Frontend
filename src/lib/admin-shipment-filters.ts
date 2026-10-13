@@ -1,4 +1,4 @@
-
+import type { LocationFilters } from "@/lib/location-url";
 export const adminShipmentStatuses = [
   "ALL",
   "DRAFT",
