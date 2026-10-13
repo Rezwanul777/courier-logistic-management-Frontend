@@ -109,7 +109,7 @@ const navigation: Record<
       label: "Audit logs",
       href: "/admin/audit-logs",
       icon: ScrollText,
-      enabled: false,
+      enabled: true,
     },
   ],
 

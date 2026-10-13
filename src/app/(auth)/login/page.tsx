@@ -1,6 +1,9 @@
 
+
 import type { Metadata } from "next";
+
 import Link from "next/link";
+
 import {
   ArrowUpRight,
   Check,
@@ -9,9 +12,25 @@ import {
   PackageCheck,
 } from "lucide-react";
 
-import { LoginForm } from "@/component/auth/Login-Form";
-import { PublicHeader } from "@/component/layout/public-header";
-import { DemoLogin } from "@/component/auth/demo-login";
+import {
+  LoginForm,
+} from "@/component/auth/Login-Form";
+
+import {
+  GoogleSignIn,
+} from "@/component/auth/google-sign-in";
+
+import {
+  DemoLogin,
+} from "@/component/auth/demo-login";
+
+import {
+  PublicHeader,
+} from "@/component/layout/public-header";
+
+// ---------------------------------------------
+// Metadata
+// ---------------------------------------------
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -25,6 +44,9 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+// ---------------------------------------------
+// Login benefits
+// ---------------------------------------------
 
 const benefits = [
   {
@@ -41,6 +63,10 @@ const benefits = [
   },
 ] as const;
 
+// ---------------------------------------------
+// Left-side introduction
+// ---------------------------------------------
+
 function LoginIntroduction() {
   return (
     <aside className="flex flex-col justify-center bg-[#102D46] px-7 py-12 text-white sm:px-12 lg:min-h-[680px] lg:px-14 lg:py-16">
@@ -56,33 +82,36 @@ function LoginIntroduction() {
       </h2>
 
       <p className="mt-6 max-w-md text-base leading-8 text-slate-300">
-        One account. Every shipment. Complete visibility.
+        One account. Every shipment.
+        Complete visibility.
       </p>
 
       <ul className="mt-10 space-y-6">
-        {benefits.map(({ text, icon: Icon }) => (
-          <li
-            key={text}
-            className="flex items-start gap-4"
-          >
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[#8EDDD0]">
-              <Icon
+        {benefits.map(
+          ({ text, icon: Icon }) => (
+            <li
+              key={text}
+              className="flex items-start gap-4"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[#8EDDD0]">
+                <Icon
+                  aria-hidden="true"
+                  className="size-5"
+                  strokeWidth={1.8}
+                />
+              </span>
+
+              <span className="pt-1 text-sm leading-6 text-slate-200">
+                {text}
+              </span>
+
+              <Check
                 aria-hidden="true"
-                className="size-5"
-                strokeWidth={1.8}
+                className="ml-auto hidden size-4 shrink-0 text-[#8EDDD0] sm:block"
               />
-            </span>
-
-            <span className="pt-1 text-sm leading-6 text-slate-200">
-              {text}
-            </span>
-
-            <Check
-              aria-hidden="true"
-              className="ml-auto hidden size-4 shrink-0 text-[#8EDDD0] sm:block"
-            />
-          </li>
-        ))}
+            </li>
+          ),
+        )}
       </ul>
 
       <div className="mt-12 border-t border-white/15 pt-6">
@@ -91,6 +120,7 @@ function LoginIntroduction() {
           className="inline-flex items-center gap-2 text-sm font-medium text-[#B9EBE1] transition-colors hover:text-white"
         >
           Learn more about CourierFlow
+
           <ArrowUpRight
             aria-hidden="true"
             className="size-4"
@@ -100,6 +130,10 @@ function LoginIntroduction() {
     </aside>
   );
 }
+
+// ---------------------------------------------
+// Login forms
+// ---------------------------------------------
 
 function LoginContent() {
   return (
@@ -125,18 +159,40 @@ function LoginContent() {
           </p>
         </div>
 
+        {/* Existing email/password login */}
         <LoginForm />
 
-<DemoLogin
-  enabled={
-    process.env.DEMO_LOGIN_ENABLED === "true"
-  }
-/>
+        {/* Divider */}
+        <div className="my-7 flex items-center gap-4">
+          <div className="h-px flex-1 bg-slate-200" />
 
+          <span className="text-xs font-semibold uppercase text-slate-400">
+            Or
+          </span>
+
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        {/* Customer-only Google login */}
+        <div className="space-y-3">
+          <p className="text-center text-xs font-medium text-slate-500">
+            Google Sign-In for customers
+          </p>
+
+          <GoogleSignIn />
+        </div>
+
+        {/* Existing optional demo login */}
+        <DemoLogin
+          enabled={
+            process.env.DEMO_LOGIN_ENABLED === "true"
+          }
+        />
 
         <div className="mt-8 border-t border-slate-200 pt-7">
           <p className="text-center text-sm text-slate-600">
             New here?{" "}
+
             <Link
               href="/register"
               className="font-semibold text-[#00877B] underline-offset-4 hover:underline focus-visible:underline"
@@ -149,6 +205,10 @@ function LoginContent() {
     </section>
   );
 }
+
+// ---------------------------------------------
+// Main page
+// ---------------------------------------------
 
 export default function LoginPage() {
   return (

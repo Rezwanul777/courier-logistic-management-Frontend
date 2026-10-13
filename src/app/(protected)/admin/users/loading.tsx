@@ -1,3 +1,5 @@
+/** biome-ignore-all lint/a11y/useSemanticElements: <explanation> */
+/** biome-ignore-all lint/suspicious/noArrayIndexKey: <explanation> */
 
 function Skeleton({
   className = "",

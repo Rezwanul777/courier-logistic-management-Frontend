@@ -121,3 +121,22 @@ export async function resetPassword(
   });
 }
 
+
+
+export async function loginWithGoogle(
+  idToken: string,
+) {
+  const response = await apiRequest(
+    "/auth/google-login",
+    loginResponseSchema,
+    {
+      method: "POST",
+      body: {
+        idToken,
+      },
+    },
+  );
+
+  return response.data.user;
+}
+
