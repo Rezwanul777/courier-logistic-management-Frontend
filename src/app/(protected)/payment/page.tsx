@@ -12,6 +12,11 @@ import {
 } from "lucide-react";
 
 import {
+  parsePaymentFilters,
+} from "@/lib/payment-filters";
+
+
+import {
   getCustomerPayments,
   type CustomerPayment,
 } from "@/lib/server/customer-payment";
@@ -388,23 +393,13 @@ function PaymentPagination({
 export default async function CustomerPaymentsPage({
   searchParams,
 }: PageProps) {
-  const params = await searchParams;
 
-  const rawPage = params.page;
 
-  const parsedPage =
-    typeof rawPage === "string" &&
-    /^[1-9]\d*$/.test(rawPage)
-      ? Number(rawPage)
-      : 1;
+const params = await searchParams;
 
-  const page =
-    Number.isSafeInteger(parsedPage) &&
-    parsedPage <= 100000
-      ? parsedPage
-      : 1;
+  const filters = parsePaymentFilters(params);
 
-  const data = await getCustomerPayments(page);
+  const data = await getCustomerPayments(filters);
 
   const { summary, pagination, items } = data;
 
