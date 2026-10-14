@@ -1,41 +1,30 @@
-
 "use client";
 
 import Link from "next/link";
+import { toast } from "sonner";
 
 import { useState } from "react";
 
-import {
-  VerifyEmailForm,
-} from "@/component/auth/verify-email-form";
+import { VerifyEmailForm } from "@/component/auth/verify-email-form";
 
-import {
-  GoogleSignIn,
-} from "@/component/auth/google-sign-in";
+import { GoogleSignIn } from "@/component/auth/google-sign-in";
 
-import {
-  Button,
-} from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 
-import {
-  RegisterForm,
-} from "./registration-from";
+import { RegisterForm } from "./registration-from";
 
 // ---------------------------------------------
 // Customer registration flow
 // ---------------------------------------------
 
 export function RegistrationFlow() {
-  const [email, setEmail] =
-    useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col gap-7">
       <div className="flex flex-col gap-3">
         <h1 className="text-3xl font-semibold tracking-tight">
-          {email
-            ? "Check your inbox"
-            : "Create your account"}
+          {email ? "Check your inbox" : "Create your account"}
         </h1>
 
         <p className="text-sm leading-relaxed text-muted-foreground">
@@ -48,9 +37,7 @@ export function RegistrationFlow() {
       {email ? (
         <>
           {/* Existing email OTP verification */}
-          <VerifyEmailForm
-            email={email}
-          />
+          <VerifyEmailForm email={email} />
 
           <Button
             variant="link"
@@ -63,8 +50,17 @@ export function RegistrationFlow() {
       ) : (
         <>
           {/* Existing password registration */}
+
           <RegisterForm
-            onContinue={setEmail}
+            onContinue={(registeredEmail) => {
+              setEmail(registeredEmail);
+
+              toast.success("Verification code sent!", {
+                description:
+                  "Please check your email and enter the verification code to activate your account.",
+                duration: 5000,
+              });
+            }}
           />
 
           <Link
@@ -91,14 +87,13 @@ export function RegistrationFlow() {
               Sign up with your Google account
             </p>
 
-            <GoogleSignIn />
+            <GoogleSignIn mode="register" />
           </div>
         </>
       )}
 
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-
         <Link
           href="/login"
           className="text-primary underline-offset-4 hover:underline"

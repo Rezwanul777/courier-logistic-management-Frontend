@@ -1,9 +1,10 @@
 
 
 import Link from "next/link";
-import { ArrowUpRight, Menu } from "lucide-react";
+import {  Menu } from "lucide-react";
 
 import { PublicAuthActions } from "@/component/layout/public-auth-actions";
+import { BrandLogo } from "@/component/layout/brand-logo";
 
 const navigation = [
   { label: "Services", href: "/services" },
@@ -22,13 +23,7 @@ export function PublicHeader() {
           aria-label="CourierFlow home"
           className="inline-flex shrink-0 items-center gap-2 text-xl font-bold tracking-tight text-[#102D46] transition-colors hover:text-[#00877B] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#00877B]"
         >
-          <ArrowUpRight
-            aria-hidden="true"
-            className="size-6 text-[#00877B]"
-            strokeWidth={2.5}
-          />
-
-          <span>CourierFlow</span>
+          <BrandLogo/>
         </Link>
 
         {/* Desktop navigation */}

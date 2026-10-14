@@ -1,6 +1,7 @@
 /** biome-ignore-all lint/a11y/useAriaPropsSupportedByRole: <explanation> */
 /** biome-ignore-all lint/a11y/useSemanticElements: <explanation> */
 
+
 "use client";
 
 import {
@@ -15,12 +16,13 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
+import { toast } from "sonner";
+
 import {
   LoaderCircle,
 } from "lucide-react";
 
 import {
-  ApiError,
   getErrorMessage,
 } from "@/lib/api-errors";
 
@@ -28,13 +30,17 @@ import {
   loginWithGoogle,
 } from "@/lib/auth-api";
 
-import {
-  queryKeys,
-} from "@/lib/query-keys";
+// ---------------------------------------------
+// Types
+// ---------------------------------------------
 
-// ---------------------------------------------
-// Google Identity Services types
-// ---------------------------------------------
+type GoogleAuthMode =
+  | "login"
+  | "register";
+
+interface Props {
+  mode: GoogleAuthMode;
+}
 
 interface GoogleCredentialResponse {
   credential?: string;
@@ -72,22 +78,30 @@ declare global {
   }
 }
 
+// ---------------------------------------------
+// Configuration
+// ---------------------------------------------
+
 const GOOGLE_CLIENT_ID =
   process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
+const AUTH_NOTICE_KEY =
+  "courierflow:post-auth-toast";
+
 // ---------------------------------------------
-// Customer Google Sign-In
+// Component
 // ---------------------------------------------
 
-export function GoogleSignIn() {
+export function GoogleSignIn({
+  mode,
+}: Props) {
   const queryClient = useQueryClient();
 
   const buttonRef =
     useRef<HTMLDivElement>(null);
 
-  // Prevent duplicate requests when Google
-  // invokes the callback more than once.
-  const inFlightRef = useRef(false);
+  const inFlightRef =
+    useRef(false);
 
   const [isLoading, setIsLoading] =
     useState(false);
@@ -95,127 +109,165 @@ export function GoogleSignIn() {
   const [isReady, setIsReady] =
     useState(false);
 
-  const [error, setError] =
-    useState<string | null>(null);
-
   // -------------------------------------------
-  // Authenticate using Google ID token
+  // Success redirect
   // -------------------------------------------
 
-  const handleGoogleCredential = useCallback(
-    async (
-      response: GoogleCredentialResponse,
-    ) => {
-      if (inFlightRef.current) {
-        return;
-      }
-
-      const idToken = response.credential;
-
-      if (!idToken) {
-        setError(
-          "Google did not return a sign-in credential.",
-        );
-        return;
-      }
-
-      inFlightRef.current = true;
-
-      setIsLoading(true);
-      setError(null);
-
+  const completeAuthentication =
+    useCallback(() => {
       try {
-        // Express verifies Google's signed token.
-        const user = await loginWithGoogle(
-          idToken,
+        // Only a toast identifier is saved.
+        // Access and refresh tokens remain
+        // in HttpOnly cookies.
+        window.sessionStorage.setItem(
+          AUTH_NOTICE_KEY,
+          mode === "register"
+            ? "google-register"
+            : "google-login",
         );
 
-        // Client-side defense in depth.
-        // The backend must also enforce this.
-        if (user.role !== "CUSTOMER") {
-          throw new Error(
-            "Google Sign-In is only available for customers.",
-          );
+        window.location.assign("/customer");
+      } catch {
+        // Fallback for browsers where
+        // sessionStorage is unavailable.
+        toast.success(
+          "Google authentication successful!",
+          {
+            description:
+              "Opening your customer dashboard...",
+          },
+        );
+
+        window.setTimeout(() => {
+          window.location.assign("/customer");
+        }, 900);
+      }
+    }, [mode]);
+
+  // -------------------------------------------
+  // Google credential handler
+  // -------------------------------------------
+
+  const handleGoogleCredential =
+    useCallback(
+      async (
+        response: GoogleCredentialResponse,
+      ) => {
+        if (inFlightRef.current) {
+          return;
         }
 
-        // Clear any previous account's cached
-        // private React Query data.
-        await queryClient.cancelQueries();
+        const idToken =
+          response.credential;
 
-        queryClient.clear();
+        if (!idToken) {
+          toast.error(
+            "Google Sign-In failed",
+            {
+              description:
+                "Google did not return a valid credential. Please try again.",
+            },
+          );
+          return;
+        }
 
-        queryClient.setQueryData(
-          queryKeys.session,
-          user,
-        );
+        inFlightRef.current = true;
+        setIsLoading(true);
 
-        // Full-page redirect ensures Next.js
-        // Server Components read the new
-        // authentication cookies.
-        window.location.replace("/customer");
-      } catch (cause: unknown) {
-        const message =
-          cause instanceof ApiError
-            ? getErrorMessage(cause)
-            : cause instanceof Error
-              ? cause.message
-              : "Google Sign-In failed. Please try again.";
+        try {
+          // Existing CourierFlow API.
+          // Backend verifies the token.
+          const user =
+            await loginWithGoogle(idToken);
 
-        setError(message);
+          // Defense in depth.
+          // Backend must enforce CUSTOMER.
+          if (user.role !== "CUSTOMER") {
+            throw new Error(
+              "Google Sign-In is available only for customers.",
+            );
+          }
 
-        inFlightRef.current = false;
-        setIsLoading(false);
-      }
-    },
-    [queryClient],
-  );
+          // Remove cached private data
+          // from a previous account.
+          await queryClient.cancelQueries();
+          queryClient.clear();
+
+          // Redirect with persistent
+          // post-login toast.
+          completeAuthentication();
+        } catch (error: unknown) {
+          const message =
+            error instanceof Error &&
+            error.name !== "ApiError"
+              ? error.message
+              : getErrorMessage(error);
+
+          toast.error(
+            "Google authentication failed",
+            {
+              description: message,
+              duration: 5500,
+            },
+          );
+
+          inFlightRef.current = false;
+          setIsLoading(false);
+        }
+      },
+      [queryClient, completeAuthentication],
+    );
 
   // -------------------------------------------
   // Initialize Google Identity Services
   // -------------------------------------------
 
-  const initializeGoogle = useCallback(() => {
-    const google = window.google;
+  const initializeGoogle =
+    useCallback(() => {
+      const google = window.google;
 
-    if (
-      !GOOGLE_CLIENT_ID ||
-      !google?.accounts?.id ||
-      !buttonRef.current
-    ) {
-      setError(
-        "Google Sign-In could not be initialized.",
+      if (
+        !GOOGLE_CLIENT_ID ||
+        !google?.accounts?.id ||
+        !buttonRef.current
+      ) {
+        toast.error(
+          "Google Sign-In unavailable",
+          {
+            description:
+              "Google could not be initialized. Please check the OAuth configuration.",
+          },
+        );
+        return;
+      }
+
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+
+        callback: (response) => {
+          void handleGoogleCredential(
+            response,
+          );
+        },
+
+        auto_select: false,
+      });
+
+      buttonRef.current.replaceChildren();
+
+      google.accounts.id.renderButton(
+        buttonRef.current,
+        {
+          theme: "outline",
+          size: "large",
+          text: "continue_with",
+          shape: "rectangular",
+          width: 300,
+        },
       );
-      return;
-    }
 
-    google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-
-      callback: (response) => {
-        void handleGoogleCredential(response);
-      },
-
-      auto_select: false,
-    });
-
-    // Prevent duplicate buttons after
-    // React re-renders or script readiness events.
-    buttonRef.current.replaceChildren();
-
-    google.accounts.id.renderButton(
-      buttonRef.current,
-      {
-        theme: "outline",
-        size: "large",
-        text: "continue_with",
-        shape: "rectangular",
-        width: 300,
-      },
-    );
-
-    setIsReady(true);
-    setError(null);
-  }, [handleGoogleCredential]);
+      setIsReady(true);
+    }, [handleGoogleCredential]);
 
   // -------------------------------------------
   // Render
@@ -229,8 +281,12 @@ export function GoogleSignIn() {
           strategy="afterInteractive"
           onReady={initializeGoogle}
           onError={() => {
-            setError(
-              "Unable to load Google Sign-In. Check your connection and browser settings.",
+            toast.error(
+              "Unable to load Google Sign-In",
+              {
+                description:
+                  "Check your internet connection or browser privacy settings.",
+              },
             );
           }}
         />
@@ -258,8 +314,7 @@ export function GoogleSignIn() {
             aria-hidden="true"
             className="size-4 animate-spin"
           />
-
-          Verifying Google account...
+          Signing in securely...
         </p>
       )}
 
@@ -268,27 +323,17 @@ export function GoogleSignIn() {
           role="alert"
           className="text-center text-sm text-amber-700"
         >
-          Google Sign-In is not configured.
+          Google Client ID is not configured.
         </p>
       )}
 
       {GOOGLE_CLIENT_ID &&
-        !isReady &&
         !isLoading &&
-        !error && (
+        !isReady && (
           <p className="text-center text-xs text-slate-500">
             Loading Google Sign-In...
           </p>
         )}
-
-      {error && (
-        <p
-          role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 p-3 text-center text-sm text-red-700"
-        >
-          {error}
-        </p>
-      )}
     </div>
   );
 }

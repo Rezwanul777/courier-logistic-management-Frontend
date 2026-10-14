@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowUpRight } from "lucide-react";
+import { BrandLogo } from "@/component/layout/brand-logo";
 
 import { getCurrentUser } from "@/lib/auth-server";
 import type { SessionUser } from "@/lib/auth-schema";
@@ -26,18 +26,7 @@ const workspaceNames: Record<DashboardRole, string> = {
 
 function DashboardLogo() {
   return (
-    <Link
-      href="/"
-      className="inline-flex items-center gap-2 text-xl font-bold tracking-tight text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#8EDDD0]"
-      aria-label="CourierFlow home"
-    >
-      <ArrowUpRight
-        aria-hidden="true"
-        className="size-6 text-[#8EDDD0]"
-      />
-
-      <span>CourierFlow</span>
-    </Link>
+     <BrandLogo variant="dark" />
   );
 }
 
@@ -98,16 +87,7 @@ export async function DashboardShell({
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex min-h-20 w-full items-center justify-between gap-4 px-5 sm:px-8">
             <div className="min-w-0">
-              <Link
-                href="/"
-                className="mb-2 inline-flex items-center gap-1 text-base font-bold text-[#102D46] lg:hidden"
-              >
-                <ArrowUpRight
-                  aria-hidden="true"
-                  className="size-5 text-[#00877B]"
-                />
-                CourierFlow
-              </Link>
+              <BrandLogo compact />
 
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#00877B]">
                 {workspaceName}

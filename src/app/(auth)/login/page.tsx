@@ -179,7 +179,7 @@ function LoginContent() {
             Google Sign-In for customers
           </p>
 
-          <GoogleSignIn />
+          <GoogleSignIn mode="login"/>
         </div>
 
         {/* Existing optional demo login */}

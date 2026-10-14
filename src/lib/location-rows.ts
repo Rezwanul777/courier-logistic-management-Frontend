@@ -3,7 +3,7 @@
 import type {
   AdminHub,
   AdminZone,
-} from "@/lib/server/admin-locations";
+} from "@/lib/server/admin-location";
 
 export interface LocationRow {
   id: number;
