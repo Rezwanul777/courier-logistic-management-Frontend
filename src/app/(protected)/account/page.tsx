@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { CustomerLoginMethods } from "@/component/auth/customer-login-methods";
 
 import { getCurrentUser } from "@/lib/auth-server";
 import { LogoutButton } from "@/component/auth/Logout-button";
@@ -17,9 +18,7 @@ export default async function AccountPage() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-12">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Your account
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Your account</h1>
 
         <LogoutButton />
       </header>
@@ -30,20 +29,15 @@ export default async function AccountPage() {
           Email: user.email,
           Role: user.role,
         }).map(([label, value]) => (
-          <div
-            key={label}
-            className="flex min-w-0 flex-col gap-1"
-          >
-            <dt className="text-sm text-muted-foreground">
-              {label}
-            </dt>
+          <div key={label} className="flex min-w-0 flex-col gap-1">
+            <dt className="text-sm text-muted-foreground">{label}</dt>
 
-            <dd className="break-words font-medium">
-              {value}
-            </dd>
+            <dd className="break-words font-medium">{value}</dd>
           </div>
         ))}
       </dl>
+
+      {user.role === "CUSTOMER" && <CustomerLoginMethods />}
     </main>
   );
 }
